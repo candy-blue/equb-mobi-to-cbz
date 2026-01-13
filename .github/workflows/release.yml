@@ -1,0 +1,43 @@
+name: release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+
+      - name: Build exe
+        run: |
+          python -m PyInstaller --noconfirm --clean --onefile --windowed --name equb-mobi-to-cbz main.py
+
+      - name: Package
+        shell: pwsh
+        run: |
+          $zipName = "equb-mobi-to-cbz-windows-x64.zip"
+          if (Test-Path $zipName) { Remove-Item $zipName -Force }
+          Compress-Archive -Path "dist/equb-mobi-to-cbz.exe","README.md" -DestinationPath $zipName
+
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/equb-mobi-to-cbz.exe
+            equb-mobi-to-cbz-windows-x64.zip
